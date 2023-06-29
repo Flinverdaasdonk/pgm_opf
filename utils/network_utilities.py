@@ -11,6 +11,27 @@ Author: Flin Verdaasdonk
 
 import numpy as np
 
+"""
+MOST FUNDAMENTAL FUNCTIONS
+"""
+def id_to_index(component, id):
+    """
+    Get the index (which element it is in the list) of the current id, for a given component
+    """
+
+    return component["id"].index(id)
+
+def index_to_id(component, idx):
+    """
+    Get the id of the current index, for a given component
+    """
+        
+    return component["id"][idx]
+
+"""
+FUNCTIONS TO MAKE HANDLING GRAPHS EASIER
+"""
+
 
 def add_incoming_lines(network):
     """
@@ -55,19 +76,7 @@ def add_outgoing_lines(network):
     return network
 
 
-def id_to_index(component, id):
-    """
-    Get the index (which element it is in the list) of the current id, for a given component
-    """
 
-    return component["id"].index(id)
-
-def index_to_id(component, idx):
-    """
-    Get the id of the current index, for a given component
-    """
-        
-    return component["id"][idx]
 
 def add_downstream_nodes(network):
     """
