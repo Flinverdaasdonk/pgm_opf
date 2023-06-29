@@ -12,6 +12,8 @@ Author: Flin Verdaasdonk
 import numpy as np
 
 
+
+
 def add_incoming_lines(network):
     """
     determine which lines are 'before' each line. 
@@ -201,133 +203,6 @@ def match_loads_to_nodes(network):
     network["node"] = node
     return network
 
-def make_simple_radial_net():
-    """
-    returns a net with the following topology
-
-node_1 ---line_3--- node_2 ----line_5---- node_6
-|                    |                     |
-source_10          sym_load_4           sym_load_7
-
-    """
-    node = {}
-    node["id"] = [1, 2, 6]
-    node["v_max"] = [1.1, 1.1, 1.1]
-    node["v_min"] = [0.9, 0.9, 0.9]
-
-    line = {}
-    line["id"] = [3, 5]
-    line["from_node"] = [1, 2]
-    line["to_node"] = [2, 6]
-    line["r1"] = [0.25, 0.25]
-    line["x1"] = [0.2, 0.2]
-    line["i_max"] = [1_000, 1_000]
-
-    sym_load = {}
-    sym_load["id"] = [4, 7]
-    sym_load["node"] = [2, 6]
-
-    sym_load["p_min"] = [0, 0]
-    sym_load["p"] = [500, 700]
-    sym_load["p_max"] = [1000, 2000]
-
-    sym_load["q_min"] = [0, 0]
-    sym_load["q"] = [0, 10]
-    sym_load["q_max"] = [100, 200]
-
-
-    source = {}
-    source["id"] = [10]
-    source["node"] = [1]
-    source["p_min"] = [0]
-    source["p"] = [5000]
-    source["p_max"] = [10_000]
-
-    source["q_min"] = [-5_000]
-    source["q"] = [0]
-    source["q_max"] = [5_000]
-
-    # compiling the results
-    network = {"node": node, "line": line, "sym_load": sym_load, "source": source}
-
-    # add additional graph data.
-    network = add_upstream_nodes(network)
-    network = add_downstream_nodes(network)
-    network = match_sources_to_nodes(network)
-    network = match_loads_to_nodes(network)
-    
-    network = add_incoming_lines(network)
-    network = add_outgoing_lines(network)
-    network = add_line_impedances(network)
-    network = add_line_admittances(network)
-
-    return network
-
-def make_simple_mesh_net():
-    """
-    returns a net with the following topology
- -------------------- line_8-----------------
- |                                          |
-node_1 ---line_3--- node_2 ----line_5---- node_6
- |                    |                     |
-source_10          sym_load_4           sym_load_7
-
-    """
-
-    node = {}
-    node["id"] = [1, 2, 6]
-    node["v_max"] = [1.1, 1.1, 1.1]
-    node["v_min"] = [0.9, 0.9, 0.9]
-
-    line = {}
-    line["id"] = [3, 5, 8]
-    line["from_node"] = [1, 2, 1]
-    line["to_node"] = [2, 6, 6]
-    line["r1"] = [0.25, 0.25, 0.25]
-    line["x1"] = [0.2, 0.2, 0.2]
-    line["i_max"] = [1_000, 1_000, 1_000]
-
-    sym_load = {}
-    sym_load["id"] = [4, 7] # load id
-    sym_load["node"] = [2, 6] # to which node it is connected
-
-    sym_load["p_min"] = [0, 0] # minimum real power 
-    sym_load["p"] = [500, 700] # real power at the present time
-    sym_load["p_max"] = [1000, 2000] # max real power 
-
-    sym_load["q_min"] = [0, 0] # minimum reactive power
-    sym_load["q"] = [50, 0] # reactive power at the present time
-    sym_load["q_max"] = [100, 200] #max reactive power 
-
-    source = {}
-    source["id"] = [10] # source id
-    source["node"] = [1] # to which node the source is connected
-
-    source["p_min"] = [-5000] # 
-    source["p"] = [5_000] # 
-    source["p_max"] = [10_000]
-
-    source["q_min"] = [-5_000]
-    source["q"] = [5_000] # 
-    source["q_max"] = [5_000]
-
-    # compiling the results
-    network = {"node": node, "line": line, "sym_load": sym_load, "source": source}
-
-    # add additional graph data.
-    network = add_upstream_nodes(network)
-    network = add_downstream_nodes(network)
-    network = match_sources_to_nodes(network)
-    network = match_loads_to_nodes(network)
-    
-    network = add_incoming_lines(network)
-    network = add_outgoing_lines(network)
-    network = add_max_line_powers(network)
-    network = add_line_impedances(network)
-    network = add_line_admittances(network)
-
-    return network
-
 def add_max_line_powers(network):
     line = network["line"]
     line["p_max"] = [r1*i_max**2 for r1, i_max in zip(line["r1"], line["i_max"])]
@@ -397,6 +272,11 @@ def add_line_admittances(network):
 
     network["line"] = line
     return network
+
+
+"""
+Helper functions for bus-injection-model based OPF Formulation
+"""
 
 def make_admittance_matrix(network):
     """ The admittance matrix is an (n+1)*(n+1) matrix (where n = number of nodes, including bus node). 
@@ -508,3 +388,193 @@ def make_Psij(Y, j):
     Yj = make_Yj(Y, j)
     Psij = (np.conj(Yj.T)- Yj)/complex(0, 2)
     return Psij
+
+
+"""
+Some basic networks
+"""
+def add_utility_graph_data(network):
+    # add additional graph data.
+    network = add_upstream_nodes(network)
+    network = add_downstream_nodes(network)
+    network = match_sources_to_nodes(network)
+    network = match_loads_to_nodes(network)
+    
+    network = add_incoming_lines(network)
+    network = add_outgoing_lines(network)
+    network = add_line_impedances(network)
+    network = add_line_admittances(network)
+
+    return network
+
+
+def make_net(add_utility_data=True):
+    """
+Make a not with the following shape
+n1(S16)-----Line8-------- n2(S17)
+|                        |
+Line9                  Line10
+|                        |
+n3(L18)---Line11--------n4(L19)-------------
+|                        |                  |
+Line12                 Line13              Line14
+|                        |                  |
+n5(L20)---Line15------n6(L21)----Line15---n7(S22)
+    
+    """
+        
+    network = {
+    "node":{"id": [1, 2, 3, 4, 5, 6, 7],
+        "v_max": [253, 253, 253, 253, 253, 253, 253],
+        "v_max": [207, 207, 207, 207, 207, 207, 207]},
+
+    "line":{"id":[8, 9, 10, 11, 12, 13, 14, 15, 16],
+        "from_node":[1, 1, 2, 3, 3, 4, 4, 5, 6],
+        "to_node":[2, 3, 4, 4, 5, 6, 7, 6, 7],
+        "r1":[0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
+        "x1":[0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
+        "i_max":[1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000]},
+
+    "sym_load":{"id": [18, 19, 20, 21],
+            "node": [3, 4, 5, 6],
+            "p_min": [100, 0, 0, 200],
+            "p": [200, 0, 500, 250],
+            "p_max": [500, 1000, 500, 1_000]},
+
+    "source":{"id": [16, 17, 22],
+            "node": [1, 2, 7],
+            "p_min": [100, 0, 0],
+            "p": [200, 0, 500],
+            "p_max": [1500, 1000, 500],
+            "q_min": [100, 0, 0],
+            "q": [200, 0, 500],
+            "q_max": [500, 1000, 500],}
+    }
+
+    if add_utility_data:
+        network = add_utility_graph_data(network)
+
+    return network
+
+
+def make_simple_radial_net(add_utility_data=True):
+    """
+    returns a net with the following topology
+
+node_1 ---line_3--- node_2 ----line_5---- node_6
+|                    |                     |
+source_10          sym_load_4           sym_load_7
+
+    """
+    node = {}
+    node["id"] = [1, 2, 6]
+    node["v_max"] = [1.1, 1.1, 1.1]
+    node["v_min"] = [0.9, 0.9, 0.9]
+
+    line = {}
+    line["id"] = [3, 5]
+    line["from_node"] = [1, 2]
+    line["to_node"] = [2, 6]
+    line["r1"] = [0.25, 0.25]
+    line["x1"] = [0.2, 0.2]
+    line["i_max"] = [1_000, 1_000]
+
+    sym_load = {}
+    sym_load["id"] = [4, 7]
+    sym_load["node"] = [2, 6]
+
+    sym_load["p_min"] = [0, 0]
+    sym_load["p"] = [500, 700]
+    sym_load["p_max"] = [1000, 2000]
+
+    sym_load["q_min"] = [0, 0]
+    sym_load["q"] = [0, 10]
+    sym_load["q_max"] = [100, 200]
+
+
+    source = {}
+    source["id"] = [10]
+    source["node"] = [1]
+    source["p_min"] = [0]
+    source["p"] = [5000]
+    source["p_max"] = [10_000]
+
+    source["q_min"] = [-5_000]
+    source["q"] = [0]
+    source["q_max"] = [5_000]
+
+    # compiling the results
+    network = {"node": node, "line": line, "sym_load": sym_load, "source": source}
+
+    if add_utility_data:
+        network = add_utility_graph_data(network)
+
+    return network
+
+def make_simple_mesh_net(add_utility_data=True):
+    """
+    returns a net with the following topology
+ -------------------- line_8-----------------
+ |                                          |
+node_1 ---line_3--- node_2 ----line_5---- node_6
+ |                    |                     |
+source_10          sym_load_4           sym_load_7
+
+    """
+
+    node = {}
+    node["id"] = [1, 2, 6]
+    node["v_max"] = [1.1, 1.1, 1.1]
+    node["v_min"] = [0.9, 0.9, 0.9]
+
+    line = {}
+    line["id"] = [3, 5, 8]
+    line["from_node"] = [1, 2, 1]
+    line["to_node"] = [2, 6, 6]
+    line["r1"] = [0.25, 0.25, 0.25]
+    line["x1"] = [0.2, 0.2, 0.2]
+    line["i_max"] = [1_000, 1_000, 1_000]
+
+    sym_load = {}
+    sym_load["id"] = [4, 7] # load id
+    sym_load["node"] = [2, 6] # to which node it is connected
+
+    sym_load["p_min"] = [0, 0] # minimum real power 
+    sym_load["p"] = [500, 700] # real power at the present time
+    sym_load["p_max"] = [1000, 2000] # max real power 
+
+    sym_load["q_min"] = [0, 0] # minimum reactive power
+    sym_load["q"] = [50, 0] # reactive power at the present time
+    sym_load["q_max"] = [100, 200] #max reactive power 
+
+    source = {}
+    source["id"] = [10] # source id
+    source["node"] = [1] # to which node the source is connected
+
+    source["p_min"] = [-5000] # 
+    source["p"] = [5_000] # 
+    source["p_max"] = [10_000]
+
+    source["q_min"] = [-5_000]
+    source["q"] = [5_000] # 
+    source["q_max"] = [5_000]
+
+    # compiling the results
+    network = {"node": node, "line": line, "sym_load": sym_load, "source": source}
+
+    # add additional graph data.
+    network = add_upstream_nodes(network)
+    network = add_downstream_nodes(network)
+    network = match_sources_to_nodes(network)
+    network = match_loads_to_nodes(network)
+    
+    network = add_incoming_lines(network)
+    network = add_outgoing_lines(network)
+    network = add_max_line_powers(network)
+    network = add_line_impedances(network)
+    network = add_line_admittances(network)
+
+    if add_utility_data:
+        network = add_utility_graph_data(network)
+
+    return network
