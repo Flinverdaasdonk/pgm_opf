@@ -1,0 +1,7 @@
+# .gitignore
+
+# Ignore the entire 'misc' directory
+/misc/
+
+# Ignore all '__pycache__' directories
+**/__pycache__/
