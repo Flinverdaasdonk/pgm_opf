@@ -12,8 +12,6 @@ Author: Flin Verdaasdonk
 import numpy as np
 
 
-
-
 def add_incoming_lines(network):
     """
     determine which lines are 'before' each line. 
@@ -275,124 +273,9 @@ def add_line_admittances(network):
 
 
 """
-Helper functions for bus-injection-model based OPF Formulation
-"""
-
-def make_admittance_matrix(network):
-    """ The admittance matrix is an (n+1)*(n+1) matrix (where n = number of nodes, including bus node). 
-    Diagonal entries are the sum of all the admittances of the cables connecting to node i (Y_ij = \sum_{k:k~i}y_ik if i=j)
-    Off-diagonal entries are:
-        - minus the line admittance if nodes i and j are connected: Y_ij = -y_ij if i!=j and i~j
-        - zero otherwise
-
-    See page 10 of source [1] 
-    """
-
-    N = len(network["node"]["id"])
-    node = network["node"]
-    line = network["line"]
-
-    # initialize complex zero matrix
-    Y = np.zeros([N, N], dtype=np.cdouble)
-
-    # for all rows
-    for r in range(N):
-        # for all columns
-        for c in range(N):
-
-            # get the node ids
-            r_id = node["id"][r]
-            c_id = node["id"][c]
-
-            # if the row equals the column, we're at a diagonal
-            if r == c:
-                
-                # initialize admittance
-                admittance = 0
-
-                # add the admittances of all downstream nodes
-                admittance += sum([node_ids_to_line_admittance(upstream_node_id=r_id, downstream_node_id=dn_id, network=network) for dn_id in node["downstream_node_ids"][r]])
-                
-                # add the admittance of all upstream nodes
-                admittance += sum([node_ids_to_line_admittance(upstream_node_id=un_id, downstream_node_id=r_id, network=network) for un_id in node["upstream_node_ids"][r]])
-                Y[r, c] = admittance
-
-            # if we're not on the diagonal
-            else:
-
-                # if the column node  is one of the downstream nodes of the current row node
-                if c_id in node["downstream_node_ids"][r]:
-                    Y[r, c] = -node_ids_to_line_admittance(upstream_node_id=r_id, downstream_node_id=c_id, network=network)
-                
-                # if the column node  is one of the upstream nodes of the current row node
-                elif c_id in node["upstream_node_ids"][r]: 
-                    Y[r, c] = -node_ids_to_line_admittance(upstream_node_id=c_id, downstream_node_id=r_id, network=network)
-                
-                # if the nodes aren't connected, we leave the admittance at zero
-                else:
-                    pass    
-
-    return Y
-
-def make_ej(n_nodes, j):
-    """
-    Vector of size 'n_nodes', with all zero's except for the jth element
-
-    See page 10 source [1]
-    """
-    ej = np.zeros(n_nodes)
-    ej[j] = 1
-    return ej
-
-def make_Jj(Y, j):
-    """
-    Matrix of same size as the admittance matrix Y, with all zero's except for the (j, j)th element
-
-    See page 10 source [1]
-    """
-
-    Jj = np.zeros(Y.shape)
-    Jj[j, j] = 1
-    return Jj
-
-def make_Yj(Y, j):
-    """
-    Matrix of same size as the admittance matrix Y, with all zero's except for the jth row, 
-    which contains the same elements as the jth row of Y
-
-    See page 10 source [1]
-    """
-    Yj = np.zeros_like(Y)
-    Yj[j, :] = Y[j, :]
-    return Yj
-
-def make_Phij(Y, j):
-    """
-    Corresponds somewhat to the real version of the Yj matrix (note, it is a complex matrix, so not solely real)
-    
-    # page 10 source [1]
-    """
-
-    
-    Yj = make_Yj(Y, j)
-    Psij = (np.conj(Yj.T) + Yj)/2
-    return Psij
- 
-def make_Psij(Y, j):
-    """
-    Corresponds somewhat to the imag version of the Yj matrix (note, it is a complex matrix, so not solely imaginary/real)
-    
-    # page 10 source [1]
-    """
-
-    Yj = make_Yj(Y, j)
-    Psij = (np.conj(Yj.T)- Yj)/complex(0, 2)
-    return Psij
-
-
-"""
 Some basic networks
 """
+
 def add_utility_graph_data(network):
     # add additional graph data.
     network = add_upstream_nodes(network)
@@ -419,7 +302,7 @@ n3(L18)---Line11--------n4(L19)-------------
 |                        |                  |
 Line12                 Line13              Line14
 |                        |                  |
-n5(L20)---Line15------n6(L21)----Line15---n7(S22)
+n5(L20)---Line15------n6(L21)----Line16---n7(S22)
     
     """
         
@@ -439,7 +322,10 @@ n5(L20)---Line15------n6(L21)----Line15---n7(S22)
             "node": [3, 4, 5, 6],
             "p_min": [100, 0, 0, 200],
             "p": [200, 0, 500, 250],
-            "p_max": [500, 1000, 500, 1_000]},
+            "p_max": [500, 1000, 500, 1_000],
+            "q_min": [100, 0, 0, 0],
+            "q": [200, 0, 300, 0],
+            "q_max": [300, 200, 300, 100]},
 
     "source":{"id": [16, 17, 22],
             "node": [1, 2, 7],
@@ -578,3 +464,119 @@ source_10          sym_load_4           sym_load_7
         network = add_utility_graph_data(network)
 
     return network
+
+
+"""
+Helper functions for bus-injection-model based OPF Formulation
+"""
+
+def make_admittance_matrix(network):
+    """ The admittance matrix is an (n+1)*(n+1) matrix (where n = number of nodes, including bus node). 
+    Diagonal entries are the sum of all the admittances of the cables connecting to node i (Y_ij = \sum_{k:k~i}y_ik if i=j)
+    Off-diagonal entries are:
+        - minus the line admittance if nodes i and j are connected: Y_ij = -y_ij if i!=j and i~j
+        - zero otherwise
+
+    See page 10 of source [1] 
+    """
+
+    N = len(network["node"]["id"])
+    node = network["node"]
+    line = network["line"]
+
+    # initialize complex zero matrix
+    Y = np.zeros([N, N], dtype=np.cdouble)
+
+    # for all rows
+    for r in range(N):
+        # for all columns
+        for c in range(N):
+
+            # get the node ids
+            r_id = node["id"][r]
+            c_id = node["id"][c]
+
+            # if the row equals the column, we're at a diagonal
+            if r == c:
+                
+                # initialize admittance
+                admittance = 0
+
+                # add the admittances of all downstream nodes
+                admittance += sum([node_ids_to_line_admittance(upstream_node_id=r_id, downstream_node_id=dn_id, network=network) for dn_id in node["downstream_node_ids"][r]])
+                
+                # add the admittance of all upstream nodes
+                admittance += sum([node_ids_to_line_admittance(upstream_node_id=un_id, downstream_node_id=r_id, network=network) for un_id in node["upstream_node_ids"][r]])
+                Y[r, c] = admittance
+
+            # if we're not on the diagonal
+            else:
+
+                # if the column node  is one of the downstream nodes of the current row node
+                if c_id in node["downstream_node_ids"][r]:
+                    Y[r, c] = -node_ids_to_line_admittance(upstream_node_id=r_id, downstream_node_id=c_id, network=network)
+                
+                # if the column node  is one of the upstream nodes of the current row node
+                elif c_id in node["upstream_node_ids"][r]: 
+                    Y[r, c] = -node_ids_to_line_admittance(upstream_node_id=c_id, downstream_node_id=r_id, network=network)
+                
+                # if the nodes aren't connected, we leave the admittance at zero
+                else:
+                    pass    
+
+    return Y
+
+def make_ej(n_nodes, j):
+    """
+    Vector of size 'n_nodes', with all zero's except for the jth element
+
+    See page 10 source [1]
+    """
+    ej = np.zeros(n_nodes)
+    ej[j] = 1
+    return ej
+
+def make_Jj(Y, j):
+    """
+    Matrix of same size as the admittance matrix Y, with all zero's except for the (j, j)th element
+
+    See page 10 source [1]
+    """
+
+    Jj = np.zeros(Y.shape)
+    Jj[j, j] = 1
+    return Jj
+
+def make_Yj(Y, j):
+    """
+    Matrix of same size as the admittance matrix Y, with all zero's except for the jth row, 
+    which contains the same elements as the jth row of Y
+
+    See page 10 source [1]
+    """
+    Yj = np.zeros_like(Y)
+    Yj[j, :] = Y[j, :]
+    return Yj
+
+def make_Phij(Y, j):
+    """
+    Corresponds somewhat to the real version of the Yj matrix (note, it is a complex matrix, so not solely real)
+    
+    # page 10 source [1]
+    """
+
+    
+    Yj = make_Yj(Y, j)
+    Psij = (np.conj(Yj.T) + Yj)/2
+    return Psij
+ 
+def make_Psij(Y, j):
+    """
+    Corresponds somewhat to the imag version of the Yj matrix (note, it is a complex matrix, so not solely imaginary/real)
+    
+    # page 10 source [1]
+    """
+
+    Yj = make_Yj(Y, j)
+    Psij = (np.conj(Yj.T)- Yj)/complex(0, 2)
+    return Psij
