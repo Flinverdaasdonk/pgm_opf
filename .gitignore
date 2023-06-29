@@ -1,7 +1,8 @@
 # .gitignore
 
-# Ignore the entire 'misc' directory
+# Ignore these directions
 /misc/
+/.vscode/
 
 # Ignore all '__pycache__' directories
 **/__pycache__/
