@@ -7,6 +7,18 @@ def verify_network(network):
 
     verify_if_all_nodes_connected(network)
     verify_if_all_lines_connected(network)
+    verify_for_unique_ids(network)
+
+def verify_for_unique_ids(network):
+    id_list = []
+    components = ["node", "line", "sym_load", "source"]
+
+    for component in components:
+        id_list += network[component]["id"]
+
+    id_set = set(id_list)
+
+    assert len(id_set) == len(id_list), f"verify_for_unique_ids: length between id list and set is not the same, which implies duplicates in list.\n list={id_list} \n set={id_set}"
 
 def verify_component_keys(network):
     verify_node_keys(network)
