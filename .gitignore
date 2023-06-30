@@ -3,6 +3,7 @@
 # Ignore these directions
 /misc/
 /.vscode/
+/notebooks/
 
 # Ignore all '__pycache__' directories
 **/__pycache__/
