@@ -158,57 +158,45 @@ def node_ids_to_line_index(upstream_node, downstream_node, line):
     raise Exception(f"No line index found with downstream_node id={downstream_node} and upstream_node id={upstream_node}")
 
 
-def add_power_keys(node):
-    """
-    Used to quickly add keys to the node dictionary that store the power info 
-    (this info is initially stored in the source/load data, but these uniquely map to a node
-    """
+def match_sources_and_loads_to_nodes(network):
+    relevant_keys = ["p_min", "p_specified", "p_max", "q_min", "q_specified", "q_max"]
 
-    # If it hasn't been added before
-    if not "p_min" in list(node.keys()):
+    source_nodes = network["source"]["node"]
+    load_nodes = network["sym_load"]["node"]
+    source_and_load_nodes = source_nodes + load_nodes
+     
+    assert len(source_and_load_nodes) == len(set(source_and_load_nodes)), f"Apparantly there are duplicates in source_and_load_nodes"
+    assert set(network["node"]["id"]) == set(source_and_load_nodes), f"Not all nodes are connected to a source/load"
 
-        node["p_min"] = []
-        node["p"] = []
-        node["p_max"] = []
+    for id in network["node"]["id"]:
+        if id in source_nodes:
+            idx = source_nodes.index(id)
+            for rk in relevant_keys:
+                value = network["source"][rk][idx]
 
-        node["q_min"] = []
-        node["q"] = []
-        node["q_max"] = []
-    return node
+                if rk not in list(network["node"].keys()):
+                    network["node"][rk] = [value]
+                
+                else:
+                    network["node"][rk].append(value)
 
-def match_sources_to_nodes(network):
-    """
-    Add the source information (p_min/p_max, etc.) to the corresponding nodes
-    """
+        elif id in load_nodes:
+            idx = load_nodes.index(id)
 
-    source = network["source"]
-    node = network["node"]
+            for rk in relevant_keys:
+                value = network["sym_load"][rk][idx]
 
-    node = add_power_keys(node)
-    for i in range(len(source["node"])):
-        for key in ["p_min", "p", "p_max", "q_min", "q", "q_max"]:
+                if rk not in list(network["node"].keys()):
+                    network["node"][rk] = [value]
+                
+                else:
+                    network["node"][rk].append(value)
 
-            node[key].append(source[key][i])
-    
-    network["node"] = node
+        else:
+            raise Exception(f"id={id} not in source_nodes or load_nodes; shouldn't happen")  
+
     return network
-        
 
-def match_loads_to_nodes(network):
-    """
-    Add the load information (p_min/p_max, etc.) to the corresponding nodes
-    """
-        
-    sym_load = network["sym_load"]
-    node = network["node"]
-
-    node = add_power_keys(node)
-    for i in range(len(sym_load["node"])):
-        for key in ["p_min", "p", "p_max", "q_min", "q", "q_max"]:
-            node[key].append(sym_load[key][i])
-
-    network["node"] = node
-    return network
 
 def add_max_line_powers(network):
     line = network["line"]
@@ -289,8 +277,10 @@ def add_utility_graph_data(network):
     # add additional graph data.
     network = add_upstream_nodes(network)
     network = add_downstream_nodes(network)
-    network = match_sources_to_nodes(network)
-    network = match_loads_to_nodes(network)
+
+    network = match_sources_and_loads_to_nodes(network)
+    #network = match_sources_to_nodes(network)
+    #network = match_loads_to_nodes(network)
     
     network = add_incoming_lines(network)
     network = add_outgoing_lines(network)
@@ -317,33 +307,45 @@ n5(L20)---Line15------n6(L21)----Line16---n7(S22)
         
     network = {
     "node":{"id": [1, 2, 3, 4, 5, 6, 7],
-        "v_max": [253, 253, 253, 253, 253, 253, 253],
-        "v_max": [207, 207, 207, 207, 207, 207, 207]},
+            "u_rated": [270, 270, 270, 270, 270, 270, 270],
+            "u_max": [253, 253, 253, 253, 253, 253, 253],
+            "u_min": [207, 207, 207, 207, 207, 207, 207]},
 
     "line":{"id":[8, 9, 10, 11, 12, 13, 14, 15, 16],
-        "from_node":[1, 1, 2, 3, 3, 4, 4, 5, 6],
-        "to_node":[2, 3, 4, 4, 5, 6, 7, 6, 7],
-        "r1":[0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
-        "x1":[0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
-        "i_max":[1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000]},
+            "from_node":[1, 1, 2, 3, 3, 4, 4, 5, 6],
+            "to_node":[2, 3, 4, 4, 5, 6, 7, 6, 7],
+            "from_status":[1,1,1,1,1,1,1,1,1],
+            "to_status":[1,1,1,1,1,1,1,1,1],
+            "r1":[0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
+            "x1":[0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25, 0.25],
+            "c1":[10e-6, 10e-6, 10e-6, 10e-6, 10e-6, 10e-6, 10e-6, 10e-6,10e-6],
+            "tan1":[0, 0, 0, 0, 0, 0, 0, 0, 0],
+            "i_n":[500, 500, 500, 500, 500, 500, 500, 500, 500],
+            "i_max":[1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000]},
 
     "sym_load":{"id": [18, 19, 20, 21],
-            "node": [3, 4, 5, 6],
-            "p_min": [100, 0, 0, 200],
-            "p": [200, 0, 500, 250],
-            "p_max": [500, 1000, 500, 1_000],
-            "q_min": [100, 0, 0, 0],
-            "q": [200, 0, 300, 0],
-            "q_max": [300, 200, 300, 100]},
+                "node": [3, 4, 5, 6],
+                "status": [1, 1, 1, 1],
+                "type": ["LoadGenType.const_power", "LoadGenType.const_power", "LoadGenType.const_power", "LoadGenType.const_power"],
+                "p_min": [100, 0, 0, 200],
+                "p_specified": [200, 0, 500, 250],
+                "p_max": [500, 1000, 500, 1_000],
+                "q_min": [100, 0, 0, 0],
+                "q_specified": [200, 0, 300, 0],
+                "q_max": [300, 200, 300, 100]},
 
-    "source":{"id": [16, 17, 22],
-            "node": [1, 2, 7],
-            "p_min": [100, 0, 0],
-            "p": [200, 0, 500],
-            "p_max": [1500, 1000, 500],
-            "q_min": [100, 0, 0],
-            "q": [200, 0, 500],
-            "q_max": [500, 1000, 500],}
+    "source":{  "id": [16, 17, 22],
+                "node": [1, 2, 7],
+                "status": [1, 1, 1],
+                "u_ref": [1, 1, 1],
+
+                "p_min": [100, 0, 0],
+                "p_specified": [200, 0, 500],
+                "p_max": [1500, 1000, 500],
+
+                "q_min": [100, 0, 0],
+                "q_specified": [200, 0, 500],
+                "q_max": [500, 1000, 500],}
     }
 
     if add_utility_data:
@@ -363,39 +365,49 @@ source_10          sym_load_4           sym_load_7
     """
     node = {}
     node["id"] = [1, 2, 6]
-    node["v_max"] = [1.1, 1.1, 1.1]
-    node["v_min"] = [0.9, 0.9, 0.9]
+    node["u_rated"] = [270, 270, 270]
+    node["u_min"] = [207, 207, 207]
+    node["u_max"] = [253, 253, 253]
 
     line = {}
     line["id"] = [3, 5]
     line["from_node"] = [1, 2]
     line["to_node"] = [2, 6]
+    line["from_status"] = [1, 1]
+    line["to_status"] = [1, 1]
     line["r1"] = [0.25, 0.25]
     line["x1"] = [0.2, 0.2]
+    line["c1"] = [10e-6, 10e-6]
+    line["tan1"] = [0, 0]
+    line["i_n"] = [500, 500]
     line["i_max"] = [1_000, 1_000]
 
     sym_load = {}
     sym_load["id"] = [4, 7]
     sym_load["node"] = [2, 6]
+    sym_load["status"] = [1, 1]
+    sym_load["type"] =  ["LoadGenType.const_power", "LoadGenType.const_power"]
 
     sym_load["p_min"] = [0, 0]
-    sym_load["p"] = [500, 700]
+    sym_load["p_specified"] = [500, 700]
     sym_load["p_max"] = [1000, 2000]
 
     sym_load["q_min"] = [0, 0]
-    sym_load["q"] = [0, 10]
+    sym_load["q_specified"] = [0, 10]
     sym_load["q_max"] = [100, 200]
 
 
     source = {}
     source["id"] = [10]
     source["node"] = [1]
+    source["status"] = [1]
+    source["u_ref"] = [1]
     source["p_min"] = [0]
-    source["p"] = [5000]
+    source["p_specified"] = [5000]
     source["p_max"] = [10_000]
 
     source["q_min"] = [-5_000]
-    source["q"] = [0]
+    source["q_specified"] = [0]
     source["q_max"] = [5_000]
 
     # compiling the results
@@ -419,55 +431,54 @@ source_10          sym_load_4           sym_load_7
 
     node = {}
     node["id"] = [1, 2, 6]
-    node["v_max"] = [1.1, 1.1, 1.1]
-    node["v_min"] = [0.9, 0.9, 0.9]
+    node["u_rated"] = [270, 270, 270]
+    node["u_min"] = [207, 207, 207]
+    node["u_max"] = [253, 253, 253]
 
     line = {}
     line["id"] = [3, 5, 8]
     line["from_node"] = [1, 2, 1]
     line["to_node"] = [2, 6, 6]
+    line["from_status"] = [1, 1, 1]
+    line["to_status"] = [1, 1, 1]
     line["r1"] = [0.25, 0.25, 0.25]
     line["x1"] = [0.2, 0.2, 0.2]
+    line["c1"] = [10e-6, 10e-6, 10e-6]
+    line["tan1"] = [0, 0, 0]
+    line["i_n"] = [500, 500, 500]
     line["i_max"] = [1_000, 1_000, 1_000]
 
     sym_load = {}
-    sym_load["id"] = [4, 7] # load id
-    sym_load["node"] = [2, 6] # to which node it is connected
+    sym_load["id"] = [4, 7]
+    sym_load["node"] = [2, 6]
+    sym_load["status"] = [1, 1]
+    sym_load["type"] =  ["LoadGenType.const_power", "LoadGenType.const_power"]
 
-    sym_load["p_min"] = [0, 0] # minimum real power 
-    sym_load["p"] = [500, 700] # real power at the present time
-    sym_load["p_max"] = [1000, 2000] # max real power 
+    sym_load["p_min"] = [0, 0]
+    sym_load["p_specified"] = [500, 700]
+    sym_load["p_max"] = [1000, 2000]
 
-    sym_load["q_min"] = [0, 0] # minimum reactive power
-    sym_load["q"] = [50, 0] # reactive power at the present time
-    sym_load["q_max"] = [100, 200] #max reactive power 
+    sym_load["q_min"] = [0, 0]
+    sym_load["q_specified"] = [0, 10]
+    sym_load["q_max"] = [100, 200]
+
 
     source = {}
-    source["id"] = [10] # source id
-    source["node"] = [1] # to which node the source is connected
-
-    source["p_min"] = [-5000] # 
-    source["p"] = [5_000] # 
+    source["id"] = [10]
+    source["node"] = [1]
+    source["status"] = [1]
+    source["u_ref"] = [1]
+    source["p_min"] = [0]
+    source["p_specified"] = [5000]
     source["p_max"] = [10_000]
 
     source["q_min"] = [-5_000]
-    source["q"] = [5_000] # 
+    source["q_specified"] = [0]
     source["q_max"] = [5_000]
+
 
     # compiling the results
     network = {"node": node, "line": line, "sym_load": sym_load, "source": source}
-
-    # add additional graph data.
-    network = add_upstream_nodes(network)
-    network = add_downstream_nodes(network)
-    network = match_sources_to_nodes(network)
-    network = match_loads_to_nodes(network)
-    
-    network = add_incoming_lines(network)
-    network = add_outgoing_lines(network)
-    network = add_max_line_powers(network)
-    network = add_line_impedances(network)
-    network = add_line_admittances(network)
 
     if add_utility_data:
         network = add_utility_graph_data(network)
