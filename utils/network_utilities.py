@@ -293,7 +293,7 @@ def add_utility_graph_data(network):
 def make_net(add_utility_data=True):
     """
 Make a not with the following shape
-n1(S16)-----Line8-------- n2(L17)
+n1(S23)-----Line8-------- n2(L17)
 |                        |
 Line9                  Line10
 |                        |
@@ -334,7 +334,7 @@ n5(L20)---Line15------n6(L21)----Line16---n7(L22)
                 "q_specified": [0, 500,200, 0, 300, 0],
                 "q_max": [1000, 500, 300, 200, 300, 100]},
 
-    "source":{  "id": [16],
+    "source":{  "id": [23],
                 "node": [1],
                 "status": [1],
                 "u_ref": [1],
