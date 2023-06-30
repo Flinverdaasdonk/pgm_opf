@@ -293,7 +293,7 @@ def add_utility_graph_data(network):
 def make_net(add_utility_data=True):
     """
 Make a not with the following shape
-n1(S23)-----Line8-------- n2(L17)
+n1(S23)-----Line8-------- n2(S17)
 |                        |
 Line9                  Line10
 |                        |
@@ -323,29 +323,29 @@ n5(L20)---Line15------n6(L21)----Line16---n7(L22)
             "i_n":[500, 500, 500, 500, 500, 500, 500, 500, 500],
             "i_max":[1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000, 1_000]},
 
-    "sym_load":{"id": [17, 22, 18, 19, 20, 21],
-                "node": [2, 7, 3, 4, 5, 6],
-                "status": [1, 1, 1, 1, 1, 1],
-                "type": ["LoadGenType.const_power", "LoadGenType.const_power", "LoadGenType.const_power", "LoadGenType.const_power", "LoadGenType.const_power", "LoadGenType.const_power"],
-                "p_min": [0, 0, 100, 0, 0, 200],
-                "p_specified": [0, 500, 200, 0, 500, 250],
-                "p_max": [1000, 500, 500, 1000, 500, 1_000],
-                "q_min": [0, 0, 100, 0, 0, 0],
-                "q_specified": [0, 500,200, 0, 300, 0],
-                "q_max": [1000, 500, 300, 200, 300, 100]},
+    "sym_load":{"id": [22, 18, 19, 20, 21],
+                "node": [7, 3, 4, 5, 6],
+                "status": [1, 1, 1, 1, 1],
+                "type": ["LoadGenType.const_power", "LoadGenType.const_power", "LoadGenType.const_power", "LoadGenType.const_power", "LoadGenType.const_power"],
+                "p_min": [0, 100, 0, 0, 200],
+                "p_specified": [500, 200, 0, 500, 250],
+                "p_max": [500, 500, 1000, 500, 1_000],
+                "q_min": [0, 100, 0, 0, 0],
+                "q_specified": [500,200, 0, 300, 0],
+                "q_max": [500, 300, 200, 300, 100]},
 
-    "source":{  "id": [23],
-                "node": [1],
-                "status": [1],
-                "u_ref": [1],
+    "source":{  "id": [23, 17],
+                "node": [1, 2],
+                "status": [1, 1],
+                "u_ref": [1, 1],
 
-                "p_min": [100],
-                "p_specified": [200],
-                "p_max": [1500],
+                "p_min": [100, 0],
+                "p_specified": [200, 100],
+                "p_max": [1500, 1000],
 
-                "q_min": [100],
-                "q_specified": [200],
-                "q_max": [500],}
+                "q_min": [100, 0],
+                "q_specified": [200, 100],
+                "q_max": [500, 200],}
     }
 
     if add_utility_data:
