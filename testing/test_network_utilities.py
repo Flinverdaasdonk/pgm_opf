@@ -7,15 +7,15 @@ class TestNetworkUtilities(unittest.TestCase):
     Test all functions in 'add_utility_graph_data()' using the network
     in 'make_net()'. For reference, this network looks like this:
         
-    n1(S16)-----Line8-------- n2(S17)
-    |                        |
-    Line9                  Line10
-    |                        |
-    n3(L18)---Line11--------n4(L19)-------------
-    |                        |                  |
-    Line12                 Line13              Line14
-    |                        |                  |
-    n5(L20)---Line15------n6(L21)----Line16---n7(S22)
+n1(S23)-----Line8-------- n2(S17)
+|                        |
+Line9                  Line10
+|                        |
+n3(L18)---Line11--------n4(L19)-------------
+|                        |                  |
+Line12                 Line13              Line14
+|                        |                  |
+n5(L20)---Line15------n6(L21)----Line16---n7(L22)
 
     
      
@@ -23,6 +23,13 @@ class TestNetworkUtilities(unittest.TestCase):
     def __init__(self, *args, **kwargs):
         super(TestNetworkUtilities, self).__init__(*args, **kwargs)
         self.network = nut.make_net()
+
+    def test_match_sources_and_loads_to_nodes(self):
+        func = self.network["node"]["p_specified"]
+        manual = [200, 100, 200, 0, 500, 250, 500]
+
+        self.assertEqual(func, manual)
+
 
     def test_add_upstream_nodes(self):
         """ Test if the 'add_upstream_nodes' function does what we expect it to do
@@ -92,6 +99,7 @@ class TestNetworkUtilities(unittest.TestCase):
         manual_set = [set(x) for x in manual_indices]
 
         self.assertEqual(func_set, manual_set)
+
 
 
 if __name__ == "__main__":

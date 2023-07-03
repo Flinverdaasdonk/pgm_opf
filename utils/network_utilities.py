@@ -303,6 +303,7 @@ Line12                 Line13              Line14
 |                        |                  |
 n5(L20)---Line15------n6(L21)----Line16---n7(L22)
     
+NOTE: If you change network topology/powers, unittesting might fail
     """
         
     network = {
